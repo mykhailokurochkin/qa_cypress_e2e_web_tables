@@ -1,5 +1,6 @@
 /* eslint-disable */
 /// <reference types='cypress' />
+import { faker } from '@faker-js/faker';
 
 describe('Web Tables page', () => {
   const baseUrl = 'https://demoqa.com/webtables';
@@ -59,23 +60,60 @@ describe('Web Tables page', () => {
 
   it('should delete a worker', () => {
     let firstName, lastName;
+
+    const worker = generateWorker();
+    cy.get('#addNewRecordButton').click();
+    cy.get('#firstName').type(worker.firstName);
+    cy.get('#lastName').type(worker.lastName);
+    cy.get('#userEmail').type(worker.email);
+    cy.get('#age').type(worker.age);
+    cy.get('#salary').type(worker.salary);
+    cy.get('#department').type(worker.department);
+    cy.get('#submit').click();
+
+    cy.get('#searchBox').clear().type(worker.firstName);
     cy.get('.rt-tbody .rt-tr-group')
       .first()
-      .find('.rt-td')
-      .then(($cells) => {
-        firstName = $cells[0].textContent;
-        lastName = $cells[1].textContent;
-        cy.get('#delete-record-4').click();
-        cy.get('.rt-tbody')
-          .should('not.contain', firstName)
-          .and('not.contain', lastName);
+      .within(() => {
+        cy.get('.rt-td').eq(0).invoke('text').then((text) => {
+          firstName = text.trim();
+        });
+        cy.get('.action-buttons [title="Delete"]').click();
       });
+
+    cy.get('.rt-tbody')
+      .should('not.contain', firstName);
   });
 
   it('should delete all workers', () => {
-    cy.get('.action-buttons [title="Delete"]').each(($btn) => {
-      cy.wrap($btn).click();
-    });
+    const deleteAllOnPage = () => {
+      return cy.get('.rt-tbody .rt-tr:not(.-padRow)').then(($rows) => {
+        if ($rows.length === 0) {
+          return false;
+        }
+
+        return cy.get('.action-buttons [title="Delete"]').each(($btn) => {
+          cy.wrap($btn).click();
+        }).then(() => true);
+      });
+    };
+
+    const deleteAllWorkers = () => {
+      deleteAllOnPage().then((deletedAny) => {
+        if (deletedAny) {
+          cy.get('.-next:not(.-disabled)').then(($nextBtn) => {
+            if ($nextBtn.length > 0) {
+              cy.wrap($nextBtn).click();
+              cy.get('.rt-tbody .rt-tr:not(.-padRow)').should('exist');
+              deleteAllWorkers();
+            }
+          });
+        }
+      });
+    };
+
+    deleteAllWorkers();
+
     cy.get('.rt-noData').should('be.visible');
     cy.get('.rt-tbody .rt-tr:not(.-padRow)').should('not.exist');
   });
