@@ -86,24 +86,16 @@ describe('Web Tables page', () => {
   });
 
   it('should delete all workers', () => {
-    const deleteAllOnPage = () => {
-      return cy.get('.rt-tbody .rt-tr:not(.-padRow)').then(($rows) => {
-        if ($rows.length === 0) {
-          return false;
-        }
-
-        return cy.get('.action-buttons [title="Delete"]').each(($btn) => {
-          cy.wrap($btn).click();
-        }).then(() => true);
-      });
-    };
-
     const deleteAllWorkers = () => {
-      deleteAllOnPage().then((deletedAny) => {
-        if (deletedAny) {
-          cy.get('.-next:not(.-disabled)').then(($nextBtn) => {
-            if ($nextBtn.length > 0) {
-              cy.wrap($nextBtn).click();
+      cy.get('body').then(($body) => {
+        if ($body.find('.action-buttons [title="Delete"]').length > 0) {
+          cy.get('.action-buttons [title="Delete"]').first().click();
+          cy.wait(500);
+          deleteAllWorkers();
+        } else {
+          cy.get('body').then(($body) => {
+            if ($body.find('.-next:not(.-disabled)').length > 0) {
+              cy.get('.-next:not(.-disabled)').click();
               cy.get('.rt-tbody .rt-tr:not(.-padRow)').should('exist');
               deleteAllWorkers();
             }
@@ -114,8 +106,8 @@ describe('Web Tables page', () => {
 
     deleteAllWorkers();
 
-    cy.get('.rt-noData').should('be.visible');
     cy.get('.rt-tbody .rt-tr:not(.-padRow)').should('not.exist');
+    cy.get('.rt-noData').should('be.visible');
   });
 
   it('should find and edit a worker', () => {
